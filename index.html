@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Preços AVATEK</title>
+    <!-- Favicon com link corrigido para exibição -->
+    <link rel="icon" type="image/x-icon" href="https://github.com/vmacagnani/api-pre-os/raw/main/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #table-container thead {
+            background-color: #4f46e5; /* Indigo-600 */
+            color: white;
+        }
+        .search-highlight {
+            background-color: #fef3c7; /* Amber-100 */
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <!-- ESTRUTURA DO TÍTULO CORRIGIDA PARA MELHOR ALINHAMENTO -->
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 flex items-center justify-center gap-4">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V8m4 8V4m4 12v-4"></path></svg>
+                <span>Tabela de Preços</span>
+                <a href="https://www.avatek.saitro.com" target="_blank" rel="noopener noreferrer" class="inline-block hover:opacity-80 transition-opacity duration-300" title="Acesse a plataforma">
+                    <!-- Tamanho da imagem controlado com classes de altura -->
+                    <img src="https://github.com/vmacagnani/api-pre-os/raw/main/logo-avatek-azul-laranja.svg" alt="Logo Avatek" class="h-10 sm:h-12">
+                </a>
+            </h1>
+            <p class="text-gray-600 mt-2">Consulta de planos e valores para a equipe de vendas.</p>
+        </header>
+
+        <!-- Seção de Configuração do Admin foi REMOVIDA -->
+        
+        <!-- Seção da Tabela de Preços (Visível para todos) -->
+        <div class="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-gray-200">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                <h2 class="text-2xl font-semibold">Planos Disponíveis</h2>
+                 <div class="flex items-center gap-4">
+                    <div class="w-full sm:w-auto sm:max-w-xs">
+                        <input type="text" id="searchInput" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Buscar na tabela...">
+                        <!-- Dica de busca adicionada novamente -->
+                        <p class="mt-1 text-xs text-gray-500">Dica: separe os termos por espaço (ex: TIM M2M).</p>
+                    </div>
+                    <!-- Botão para recarregar a tabela com texto -->
+                    <button id="reloadBtn" title="Recarregar dados da planilha" class="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 text-sm font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20 4l-4 4M4 20l4-4"></path></svg>
+                        <span>Recarregar</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="loading" class="text-center py-10">
+                <p class="text-gray-600">Carregando dados da API...</p>
+            </div>
+            
+            <div id="error" class="text-center py-10 hidden">
+                <p class="text-red-600 font-semibold">Erro ao carregar os dados.</p>
+                <p class="text-gray-500 mt-2">Não foi possível conectar à API de preços.</p>
+            </div>
+
+            <div id="table-container" class="overflow-x-auto rounded-lg">
+                <!-- A tabela será inserida aqui via JS -->
+            </div>
+            <p id="no-results" class="text-center py-10 hidden text-gray-500">Nenhum resultado encontrado para a sua busca.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO PRINCIPAL ---
+        // O link da sua API agora está "escondido" aqui.
+        const SCRIPT_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLin1zM0qmoWv40HtYGG4a6z_jMuYTFY9mjOCZiTjZBCAM4sRiE-VfNo5DPUcMc09SfE1zvm1X367gpnDazs6VzqymlDLX7KPvt5n_XpvMYSSMb_o-DBAiqBq0JxjzJSrfO9_0YzKVYzHEEf1-yF0cP_KRo1vZaqjT5c0LorvlRnlLmMw6ou92P3htPcwappmAaMZCX4-3WC2j4AVsgpNyQSeBOMB1nnikahrJrWnwqfsAfyWlKsfqyTlEtAQ9AXnAL3jTpCjbNLG-bbBXglyYwVHXSffA&lib=MhvZC4O9qDP8EPfJfHAGyiuEQBoO8zN4x";
+
+        // Elementos do DOM
+        const tableContainer = document.getElementById('table-container');
+        const searchInput = document.getElementById('searchInput');
+        const reloadBtn = document.getElementById('reloadBtn');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const noResultsDiv = document.getElementById('no-results');
+        let fullTableData = []; // Armazena todos os dados para a busca
+
+        // Função para buscar e renderizar a tabela
+        async function loadAndRenderTable() {
+            loadingDiv.classList.remove('hidden');
+            tableContainer.innerHTML = '';
+            errorDiv.classList.add('hidden');
+            noResultsDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch(SCRIPT_URL);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error || data.length === 0) {
+                    throw new Error(data.error || 'A planilha parece estar vazia.');
+                }
+                
+                fullTableData = data; 
+                renderTable(data);
+
+            } catch (e) {
+                console.error('Erro ao carregar os dados:', e);
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
+        }
+
+        // Função para formatar números como moeda brasileira (BRL)
+        function formatCurrency(value) {
+            const number = parseFloat(String(value).replace(',', '.'));
+            if (isNaN(number)) {
+                return value;
+            }
+            return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+        
+        // Função para definir cores e logos por operadora (com suas adições)
+        function getOperatorInfo(operatorName) {
+            const name = String(operatorName).toLowerCase();
+            if (name.includes('tim')) return {
+                color: 'bg-blue-100 text-blue-800',
+                logo: 'https://logo.clearbit.com/tim.com.br'
+            };
+            if (name.includes('vivo')) return {
+                color: 'bg-orange-100 text-orange-800',
+                logo: 'https://logo.clearbit.com/vivo.com.br'
+            };
+            if (name.includes('claro')) return {
+                color: 'bg-red-100 text-red-800',
+                logo: 'https://logo.clearbit.com/claro.com.br'
+            };
+             if (name.includes('nlt')) return {
+                color: 'bg-green-100 text-green-800',
+                logo: 'https://logo.clearbit.com/nlt.com.br'
+            };
+             if (name.includes('emnify')) return {
+                color: 'bg-purple-100 text-purple-800',
+                logo: 'https://logo.clearbit.com/emnify.com'
+            };
+            if (name.includes('linksfield')) return {
+                color: 'bg-pink-100 text-pink-800',
+                logo: 'https://logo.clearbit.com/linksfield.com.br'
+            };
+            if (name.includes('eseye')) return {
+                color: 'bg-yellow-100 text-yellow-800',
+                logo: 'https://logo.clearbit.com/eseye.com.br'
+            };
+            // Adicione mais operadoras aqui
+            return {
+                color: 'bg-gray-100 text-gray-800',
+                logo: null // Sem logo para a cor padrão
+            };
+        }
+
+        // Função para renderizar a tabela no HTML
+        function renderTable(data) {
+            if (data.length === 0) {
+                noResultsDiv.classList.remove('hidden');
+                tableContainer.innerHTML = '';
+                return;
+            }
+            noResultsDiv.classList.add('hidden');
+
+            const headers = Object.keys(data[0]);
+            const currencyKeywords = ['preço', 'valor', 'ativação'];
+            
+            const table = document.createElement('table');
+            table.className = 'min-w-full divide-y divide-gray-200';
+
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            headers.forEach(headerText => {
+                const th = document.createElement('th');
+                th.scope = 'col';
+                th.className = 'px-6 py-3 text-left text-xs font-medium uppercase tracking-wider';
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            tbody.className = 'bg-white divide-y divide-gray-200';
+            data.forEach(rowData => {
+                const tr = document.createElement('tr');
+                headers.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
+                    
+                    let cellValue = String(rowData[header]);
+                    const isCurrencyColumn = currencyKeywords.some(keyword => header.toLowerCase().includes(keyword));
+                    const isOperatorColumn = header.toLowerCase().includes('operadora');
+                    
+                    if (isCurrencyColumn) {
+                        cellValue = formatCurrency(cellValue);
+                    }
+                    
+                    // Lógica para adicionar o badge colorido com logo
+                    if (isOperatorColumn && cellValue.trim() !== '') {
+                        const operatorInfo = getOperatorInfo(cellValue);
+                        let logoHtml = '';
+                        if (operatorInfo.logo) {
+                            logoHtml = `<img src="${operatorInfo.logo}" alt="${cellValue} logo" class="h-4 w-auto inline-block mr-1.5">`;
+                        }
+                        const badgeHTML = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${operatorInfo.color}">${logoHtml}<span>${cellValue}</span></span>`;
+                        td.innerHTML = highlightSearchTerm(badgeHTML);
+                    } else {
+                        td.innerHTML = highlightSearchTerm(cellValue);
+                    }
+                    
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            tableContainer.innerHTML = '';
+            tableContainer.appendChild(table);
+        }
+
+        // Função para destacar os termos da busca
+        function highlightSearchTerm(text) {
+            const searchTerms = searchInput.value.trim().split(' ').filter(term => term.length > 0);
+            if (searchTerms.length === 0 || !text) return text;
+
+            let highlightedText = String(text);
+            const uniqueTerms = [...new Set(searchTerms)]; 
+
+            uniqueTerms.forEach(term => {
+                const escapedTerm = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const regex = new RegExp(`(${escapedTerm})`, 'gi');
+                // Lógica para não destacar dentro de tags HTML
+                const parts = highlightedText.split(/(<[^>]*>)/);
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 0) { // Apenas em texto, não em tags
+                        parts[i] = parts[i].replace(regex, `<span class="search-highlight">$1</span>`);
+                    }
+                }
+                highlightedText = parts.join('');
+            });
+
+            return highlightedText;
+        }
+
+        // Função de busca combinada (AND)
+        function filterTable() {
+            const searchTerms = searchInput.value.toLowerCase().trim().split(' ').filter(term => term !== '');
+
+            if (searchTerms.length === 0) {
+                renderTable(fullTableData);
+                return;
+            }
+
+            const filteredData = fullTableData.filter(row => {
+                return searchTerms.every(term => {
+                    return Object.values(row).some(value =>
+                        value && String(value).toLowerCase().includes(term)
+                    );
+                });
+            });
+
+            renderTable(filteredData);
+        }
+
+        // Event Listeners
+        searchInput.addEventListener('input', filterTable);
+        reloadBtn.addEventListener('click', loadAndRenderTable);
+
+        // Carregar a tabela automaticamente ao iniciar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAndRenderTable();
+        });
+
+    </script>
+</body>
+</html>
